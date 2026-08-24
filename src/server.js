@@ -223,7 +223,7 @@ async function start() {
   }
 
   app.listen(PORT, () => {
-    process.stdout.write(`Server is Live on http://localhost:${PORT}\n`);
+    process.stdout.write(`Server is Live on port ${PORT}\n`);
 
     try {
       whatsappManager.initialize();
