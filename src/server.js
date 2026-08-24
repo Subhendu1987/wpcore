@@ -14,6 +14,8 @@ const API_KEY = process.env.API_KEY;
 if (!API_KEY) {
   throw new Error('API_KEY must be set in the environment or .env file.');
 }
+const publicBaseUrl = process.env.PUBLIC_BASE_URL
+  || (process.env.RAILWAY_PUBLIC_DOMAIN ? `https://${process.env.RAILWAY_PUBLIC_DOMAIN}` : `http://localhost:${PORT}`);
 const logHistory = [];
 const logClients = new Set();
 const logSessions = new Map();
@@ -56,7 +58,7 @@ function createPostmanCollection(baseUrl, includeApiKey = true) {
 }
 
 function updatePostmanCollection() {
-  const collection = createPostmanCollection(`http://localhost:${PORT}`, false);
+  const collection = createPostmanCollection(publicBaseUrl, false);
   fs.writeFileSync(postmanCollectionPath, `${JSON.stringify(collection, null, 2)}\n`);
 }
 

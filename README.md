@@ -51,12 +51,15 @@ npm run dev
 
 ```env
 API_KEY=generate-a-new-long-random-secret
+PUBLIC_BASE_URL=https://your-railway-domain.up.railway.app
 SESSION_DIR=/data/.wwebjs_auth
 WEBHOOK_CONFIG_FILE=/data/.webhook.json
 WEBHOOK_URL=https://your-webhook.example/whatsapp
 ```
 
 Do not add `PORT`; Railway provides it automatically. `WEBHOOK_URL` is optional.
+Set `PUBLIC_BASE_URL` to your HTTPS Railway domain so the refreshed Postman
+collection uses the public URL instead of `localhost`.
 Add a Railway volume mounted at `/data` so the WhatsApp login session survives
 deployments. After the service starts, use the generated Railway domain as
 `baseUrl` in Postman and call `POST /api/login` with the same `API_KEY` in the
