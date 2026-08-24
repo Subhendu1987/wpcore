@@ -1,0 +1,20 @@
+{
+  "name": "wpcore",
+  "version": "1.0.0",
+  "description": "WhatsApp login & messaging API service (QR login, send message, webhook receiver, chat history, health status)",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "multer": "^2.2.0",
+    "qrcode": "^1.5.4",
+    "whatsapp-web.js": "^1.26.0"
+  }
+}

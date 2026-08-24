@@ -1,0 +1,318 @@
+{
+  "info": {
+    "_postman_id": "b7e3f2a1-4c5d-4e6f-8a9b-0c1d2e3f4a5b",
+    "name": "wpcore — WhatsApp API",
+    "description": "WhatsApp Login & Messaging API.\n\nAll requests require the API key in the `x-api-key` header.\n\nThe key is pre-configured at the collection level — no need to add it per request.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "apikey",
+    "apikey": [
+      {
+        "key": "key",
+        "value": "x-api-key",
+        "type": "string"
+      },
+      {
+        "key": "value",
+        "value": "{{apiKey}}",
+        "type": "string"
+      },
+      {
+        "key": "in",
+        "value": "header",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000",
+      "type": "string"
+    },
+    {
+      "key": "apiKey",
+      "value": "{{apiKey}}",
+      "type": "string"
+    },
+    {
+      "key": "phone",
+      "value": "919083379784",
+      "type": "string"
+    },
+    {
+      "key": "chatId",
+      "value": "919083379784",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (QR, + code if phone header set)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "phone",
+            "value": "{{phone}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "3. Logout",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          },
+          {
+            "key": "phone",
+            "value": "{{phone}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "4. Restart Client",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/login/restart",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "login",
+            "restart"
+          ]
+        },
+        "description": "Restarts the WhatsApp client. Useful after a disconnect or if stuck."
+      },
+      "response": []
+    },
+    {
+      "name": "5. Send Message",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "to",
+              "value": "{{chatId}}",
+              "type": "text"
+            },
+            {
+              "key": "message",
+              "value": "Hello from wpcore!",
+              "type": "text"
+            },
+            {
+              "key": "media",
+              "type": "file",
+              "src": ""
+            },
+            {
+              "key": "mediaUrl",
+              "value": "",
+              "type": "text"
+            },
+            {
+              "key": "caption",
+              "value": "",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/messages/send",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "messages",
+            "send"
+          ]
+        },
+        "description": "Sends text or web URLs with `message`, an uploaded file with `media`, or direct remote media with `mediaUrl`. Non-direct URLs such as YouTube pages are sent as text links. Use `caption` with media."
+      },
+      "response": []
+    },
+    {
+      "name": "6. List Chats",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "limit",
+              "value": "200",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/chats",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "chats"
+          ]
+        },
+        "description": "Lists chats (id, name, unread count, last message). Set the maximum number of chats in the JSON body with `limit` (1–200)."
+      },
+      "response": []
+    },
+    {
+      "name": "7. Chat History",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "chat",
+              "value": "{{chatId}}",
+              "type": "text"
+            },
+            {
+              "key": "limit",
+              "value": "50",
+              "type": "text"
+            }
+          ]
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/chats/history",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "chats",
+            "history"
+          ]
+        },
+        "description": "Fetches recent messages from a specific chat. Send `chat` and `limit` in the JSON body."
+      },
+      "response": []
+    },
+    {
+      "name": "8. Health Status",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/health",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "health"
+          ]
+        },
+        "description": "Connection status of the WhatsApp client. HTTP 200 when connected, 503 otherwise."
+      },
+      "response": []
+    },
+    {
+      "name": "10. Show Info",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "x-api-key",
+            "value": "{{apiKey}}",
+            "type": "text"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/info",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "info"
+          ]
+        },
+        "description": "Show the logged-in phone number, current status, uptime, ready time, and configured webhook URL."
+      },
+      "response": []
+    }
+  ]
+}
