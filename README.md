@@ -4,6 +4,8 @@
 
 `wpcore` wraps [`whatsapp-web.js`](https://github.com/pedroslopez/whatsapp-web.js) in a small Express service. It is designed for local tools, internal automation, prototypes, and controlled integrations where a WhatsApp Web session is appropriate.
 
+[![Deploy on Railway](https://railway.com/button.svg)](https://railway.com/new)
+
 ## What it does
 
 | Capability | Route |
