@@ -62,6 +62,11 @@ deployments. After the service starts, use the generated Railway domain as
 `baseUrl` in Postman and call `POST /api/login` with the same `API_KEY` in the
 `x-api-key` header.
 
+Railway will use the included `Dockerfile`, which installs Chromium and its
+Linux runtime libraries required by Puppeteer. If you configured a webhook,
+set `WEBHOOK_URL` to the complete real URL from webhook.site or your webhook
+provider; do not leave the example `https://webhook.site/your-url` value.
+
 ## Configuration
 
 Create `.env` in the project root:
