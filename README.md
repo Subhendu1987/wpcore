@@ -44,6 +44,24 @@ For development with Node's watch mode:
 npm run dev
 ```
 
+## Deploy on Railway
+
+1. Create a Railway project from this GitHub repository.
+2. Open the service's **Variables** tab and add:
+
+```env
+API_KEY=generate-a-new-long-random-secret
+SESSION_DIR=/data/.wwebjs_auth
+WEBHOOK_CONFIG_FILE=/data/.webhook.json
+WEBHOOK_URL=https://your-webhook.example/whatsapp
+```
+
+Do not add `PORT`; Railway provides it automatically. `WEBHOOK_URL` is optional.
+Add a Railway volume mounted at `/data` so the WhatsApp login session survives
+deployments. After the service starts, use the generated Railway domain as
+`baseUrl` in Postman and call `POST /api/login` with the same `API_KEY` in the
+`x-api-key` header.
+
 ## Configuration
 
 Create `.env` in the project root:
