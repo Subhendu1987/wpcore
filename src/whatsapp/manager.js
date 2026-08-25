@@ -74,6 +74,13 @@ class WhatsAppManager extends EventEmitter {
 
     this._setStatus('initializing');
 
+    // Clear any QR left over from a previous client instance so a stale QR
+    // (possibly for a different account) is never served while booting.
+    this.qrDataUrl = null;
+    this.qrRaw = null;
+    this.qrPng = null;
+    this.qrId = null;
+
     this.client = new Client({
       authStrategy: new LocalAuth({
         dataPath: process.env.SESSION_DIR || './.wwebjs_auth',
@@ -99,9 +106,9 @@ class WhatsAppManager extends EventEmitter {
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
-          // Memory-reduction flags for small containers (e.g. Railway 512MB):
-          '--no-zygote',
-          '--single-process',
+          // Memory-reduction flags for small containers (e.g. Railway 512MB).
+          // NOTE: do NOT add --single-process/--no-zygote — they break
+          // whatsapp-web.js page.evaluate calls (getNumberId, sendMessage).
           '--disable-software-rasterizer',
           '--disable-extensions',
           '--disable-background-networking',
@@ -111,7 +118,6 @@ class WhatsAppManager extends EventEmitter {
           '--metrics-recording-only',
           '--mute-audio',
           '--no-first-run',
-          '--renderer-process-limit=1',
         ],
       },
     });
@@ -382,12 +388,27 @@ class WhatsAppManager extends EventEmitter {
     this.initialize();
   }
 
+  /**
+   * Deletes the persisted LocalAuth session from disk. Used by logout() so
+   * the NEXT initialize() cannot silently restore the old account's session.
+   */
+  _wipeSessionData() {
+    const sessionDir = path.resolve(process.env.SESSION_DIR || './.wwebjs_auth');
+    try {
+      fs.rmSync(sessionDir, { recursive: true, force: true });
+      console.log(`[wa] Persisted session wiped (${sessionDir}).`);
+    } catch (err) {
+      console.warn('[wa] Could not wipe session data:', err && err.message);
+    }
+  }
+
   /** Logout and wipe the saved session */
   async logout() {
     // IMPORTANT: keep a local reference. client.logout() triggers the
     // 'disconnected' event, whose handler sets this.client = null — using
     // this.client afterwards would skip destroy() and leak the browser.
     const client = this.client;
+    const previousNumber = this.loggedInNumber;
     this.client = null;
     if (client) {
       try {
@@ -401,11 +422,15 @@ class WhatsAppManager extends EventEmitter {
         /* ignore */
       }
     }
+    // Wipe the on-disk session so a restart cannot resurrect the old account.
+    this._wipeSessionData();
     this.readyAt = null;
     this.pairingCode = null;
     this._pairingCodeAt = 0;
     this.loggedInNumber = null;
+    this.lastError = null;
     this._setStatus('disconnected');
+    console.log(`[wa] Logout complete${previousNumber ? ` (was +${previousNumber})` : ''}.`);
   }
 
   /**
