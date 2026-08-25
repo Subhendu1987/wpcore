@@ -398,11 +398,14 @@ class WhatsAppManager extends EventEmitter {
    */
   _wipeSessionData() {
     const sessionDir = path.resolve(process.env.SESSION_DIR || './.wwebjs_auth');
-    try {
-      fs.rmSync(sessionDir, { recursive: true, force: true });
-      console.log(`[wa] Persisted session wiped (${sessionDir}).`);
-    } catch (err) {
-      console.warn('[wa] Could not wipe session data:', err && err.message);
+    const paths = [sessionDir, `${sessionDir}-cache`];
+    for (const dataPath of paths) {
+      try {
+        fs.rmSync(dataPath, { recursive: true, force: true });
+        console.log(`[wa] Persisted session/cache wiped (${dataPath}).`);
+      } catch (err) {
+        console.warn(`[wa] Could not wipe ${dataPath}:`, err && err.message);
+      }
     }
   }
 
@@ -414,20 +417,23 @@ class WhatsAppManager extends EventEmitter {
     const client = this.client;
     const previousNumber = this.loggedInNumber;
     this.client = null;
-    if (client) {
-      try {
-        await client.logout();
-      } catch (_) {
-        /* ignore */
+    try {
+      if (client) {
+        try {
+          await client.logout();
+        } catch (_) {
+          /* target may already be closed */
+        }
+        try {
+          await client.destroy();
+        } catch (_) {
+          /* target may already be closed */
+        }
       }
-      try {
-        await client.destroy();
-      } catch (_) {
-        /* ignore */
-      }
+    } finally {
+      // Always wipe disk state, even when logout/destroy reports Target closed.
+      this._wipeSessionData();
     }
-    // Wipe the on-disk session so a restart cannot resurrect the old account.
-    this._wipeSessionData();
     this.readyAt = null;
     this.pairingCode = null;
     this._pairingCodeAt = 0;
@@ -465,23 +471,24 @@ class WhatsAppManager extends EventEmitter {
       }
       let numberId;
       try {
-        numberId = await this.client.getNumberId(digits);
+        numberId = await Promise.race([
+          this.client.getNumberId(digits),
+          new Promise((_, reject) => setTimeout(() => reject(new Error('Recipient lookup timed out')), 30000)),
+        ]);
       } catch (err) {
-        console.error(`[wa] Recipient lookup failed for ${digits}:`, err && err.stack ? err.stack : err);
-        const lookupError = new Error(
-          'WhatsApp recipient lookup failed. The client may be connected but its WhatsApp Web page is not healthy; restart the client and retry.'
-        );
-        lookupError.statusCode = 503;
-        throw lookupError;
+        console.warn(`[wa] Recipient lookup failed for ${digits}; trying direct chat id:`, err && err.message);
+        // getNumberId can hang on some WhatsApp Web builds. Direct phone chat
+        // ids work for normal individual recipients and let sendMessage proceed.
+        target = `${digits}@c.us`;
       }
-      if (!numberId) {
+      if (!target && !numberId) {
         const err = new Error(
           `Number "${digits}" is not registered on WhatsApp. Check the country code and number.`
         );
         err.statusCode = 404;
         throw err;
       }
-      target = numberId._serialized;
+      if (!target) target = numberId._serialized;
     }
 
     let content = message;
