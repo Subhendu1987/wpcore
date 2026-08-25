@@ -22,6 +22,7 @@ class WhatsAppManager extends EventEmitter {
     this.pairingCode = null; // 8-digit code for phone-number linking
     this._pairingCodeAt = 0; // Timestamp of when the current pairing code was generated
     this._pairingInProgress = false; // Guards against concurrent pairing requests
+    this._clientGeneration = 0;
     this.lastError = null;
     this.readyAt = null;
     this.loggedInNumber = null; // Phone number (digits) of the currently logged-in account
@@ -72,6 +73,7 @@ class WhatsAppManager extends EventEmitter {
   initialize() {
     if (this.client) return;
 
+    const clientGeneration = ++this._clientGeneration;
     this._setStatus('initializing');
 
     // Clear any QR left over from a previous client instance so a stale QR
@@ -122,6 +124,9 @@ class WhatsAppManager extends EventEmitter {
       },
     });
 
+    const isCurrentClient = () => this._clientGeneration === clientGeneration;
+    const clientInstance = this.client;
+
     // ---- Lifecycle events ----
 
     this.client.on('qr', async (qr) => {
@@ -146,6 +151,7 @@ class WhatsAppManager extends EventEmitter {
     });
 
     this.client.on('ready', () => {
+      if (!isCurrentClient()) return;
       this.readyAt = new Date().toISOString();
       this.qrDataUrl = null;
       this.qrRaw = null;
@@ -153,17 +159,14 @@ class WhatsAppManager extends EventEmitter {
       this.qrId = null;
       this.pairingCode = null;
       // Remember which account is logged in (digits only, e.g. "919641114583")
-      const loggedInUser = this.client.info?.wid?.user;
+      const loggedInUser = clientInstance.info?.wid?.user;
       this.loggedInNumber = loggedInUser ? String(loggedInUser).replace(/\D/g, '') : null;
       this._setStatus('ready');
       console.log(`[wa] Client is ready. Logged in as +${this.loggedInNumber || 'unknown'}.`);
     });
 
-    // Capture the instance so stale events from a torn-down client are ignored.
-    const clientInstance = this.client;
-
     this.client.on('disconnected', async (reason) => {
-      if (this.client !== clientInstance) return; // already replaced/torn down
+      if (!isCurrentClient() || this.client !== clientInstance) return; // already replaced/torn down
       this.readyAt = null;
       this.pairingCode = null;
       this._pairingCodeAt = 0;

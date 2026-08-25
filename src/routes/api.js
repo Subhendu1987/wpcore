@@ -108,7 +108,13 @@ router.get('/login/qr/:file', (req, res) => {
 router.post('/logout', async (req, res) => {
   try {
     const phone = req.get('phone');
+    const force = req.query.force === 'true' || req.get('x-force-logout') === 'true';
     if (!phone) {
+      if (force) {
+        await manager.logout();
+        console.info('[api] Forced WhatsApp logout completed.');
+        return res.json({ success: true, message: 'Logged out. Persisted session cleared.' });
+      }
       return res.status(400).json({
         success: false,
         error: '"phone" header is required. Example: phone: 919641114583',
@@ -126,7 +132,7 @@ router.post('/logout', async (req, res) => {
     // Only allow logout when the phone matches the logged-in account
     const requestDigits = phone.replace(/\D/g, '');
     const loggedInDigits = (manager.loggedInNumber || '').replace(/\D/g, '');
-    if (!loggedInDigits || requestDigits !== loggedInDigits) {
+    if (!force && (!loggedInDigits || requestDigits !== loggedInDigits)) {
       return res.status(403).json({
         success: false,
         error: 'Credential error. Logout refused.',
