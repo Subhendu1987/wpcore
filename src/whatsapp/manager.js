@@ -99,6 +99,19 @@ class WhatsAppManager extends EventEmitter {
           '--disable-setuid-sandbox',
           '--disable-dev-shm-usage',
           '--disable-gpu',
+          // Memory-reduction flags for small containers (e.g. Railway 512MB):
+          '--no-zygote',
+          '--single-process',
+          '--disable-software-rasterizer',
+          '--disable-extensions',
+          '--disable-background-networking',
+          '--disable-default-apps',
+          '--disable-sync',
+          '--disable-translate',
+          '--metrics-recording-only',
+          '--mute-audio',
+          '--no-first-run',
+          '--renderer-process-limit=1',
         ],
       },
     });
@@ -140,15 +153,26 @@ class WhatsAppManager extends EventEmitter {
       console.log(`[wa] Client is ready. Logged in as +${this.loggedInNumber || 'unknown'}.`);
     });
 
-    this.client.on('disconnected', (reason) => {
+    // Capture the instance so stale events from a torn-down client are ignored.
+    const clientInstance = this.client;
+
+    this.client.on('disconnected', async (reason) => {
+      if (this.client !== clientInstance) return; // already replaced/torn down
       this.readyAt = null;
       this.pairingCode = null;
       this._pairingCodeAt = 0;
       this.loggedInNumber = null;
       this._setStatus('disconnected');
       console.warn('[wa] Client disconnected:', reason);
-      // Reset so a fresh initialize() can be attempted
+      // IMPORTANT: destroy the browser here. Without this the Chromium process
+      // keeps running orphaned while this.client = null lets a new one spawn —
+      // each disconnect then doubles memory until the container is OOM-killed.
       this.client = null;
+      try {
+        await clientInstance.destroy();
+      } catch (err) {
+        console.warn('[wa] Error destroying disconnected client:', err && err.message);
+      }
     });
 
     // ---- Incoming messages: emit locally + forward to webhook ----
@@ -715,4 +739,22 @@ class WhatsAppManager extends EventEmitter {
 }
 
 // Singleton instance shared across the app
-module.exports = new WhatsAppManager();
+const manager = new WhatsAppManager();
+
+// The WhatsApp Web page slowly accumulates memory over days. Recycle the
+// client on a schedule so the container stays within its memory budget.
+// Set AUTO_RESTART_HOURS=0 to disable.
+const RESTART_HOURS = parseFloat(process.env.AUTO_RESTART_HOURS ?? '12');
+if (RESTART_HOURS > 0) {
+  setInterval(async () => {
+    if (manager.status !== 'ready' || !manager.client) return;
+    console.log(`[wa] Scheduled recycle after ${RESTART_HOURS}h to release memory...`);
+    try {
+      await manager.restart();
+    } catch (err) {
+      console.error('[wa] Scheduled recycle failed:', err && err.message);
+    }
+  }, RESTART_HOURS * 60 * 60 * 1000).unref();
+}
+
+module.exports = manager;
