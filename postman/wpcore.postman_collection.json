@@ -28,7 +28,7 @@
   "variable": [
     {
       "key": "baseUrl",
-      "value": "https://wpcore-production.up.railway.app",
+      "value": "http://localhost:3000",
       "type": "string"
     },
     {

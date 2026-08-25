@@ -201,7 +201,12 @@ router.post('/messages/send', mediaUpload.single('media'), async (req, res) => {
   } catch (err) {
     console.error('[api] Message send failed:', err.message);
     const code = err.statusCode || 500;
-    res.status(code).json({ success: false, error: err.message });
+    res.status(code).json({
+      success: false,
+      error: err.message,
+      status: manager.status,
+      loggedInNumber: manager.loggedInNumber,
+    });
   }
 });
 

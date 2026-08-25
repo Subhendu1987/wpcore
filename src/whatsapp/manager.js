@@ -100,6 +100,7 @@ class WhatsAppManager extends EventEmitter {
       },
       puppeteer: {
         headless: true,
+        protocolTimeout: Number(process.env.PUPPETEER_PROTOCOL_TIMEOUT || 120000),
         ...(process.env.PUPPETEER_EXECUTABLE_PATH
           ? { executablePath: process.env.PUPPETEER_EXECUTABLE_PATH }
           : {}),
@@ -445,6 +446,12 @@ class WhatsAppManager extends EventEmitter {
   async sendMessage(chatId, message, options = {}) {
     await this._ensureReady();
 
+    if (!chatId || typeof chatId !== 'string') {
+      const err = new Error('Recipient "to" must be a phone number or WhatsApp chat id.');
+      err.statusCode = 400;
+      throw err;
+    }
+
     let target;
     if (chatId.includes('@')) {
       target = chatId; // already a chat id (xxx@c.us / xxx@g.us)
@@ -456,7 +463,17 @@ class WhatsAppManager extends EventEmitter {
         err.statusCode = 400;
         throw err;
       }
-      const numberId = await this.client.getNumberId(digits);
+      let numberId;
+      try {
+        numberId = await this.client.getNumberId(digits);
+      } catch (err) {
+        console.error(`[wa] Recipient lookup failed for ${digits}:`, err && err.stack ? err.stack : err);
+        const lookupError = new Error(
+          'WhatsApp recipient lookup failed. The client may be connected but its WhatsApp Web page is not healthy; restart the client and retry.'
+        );
+        lookupError.statusCode = 503;
+        throw lookupError;
+      }
       if (!numberId) {
         const err = new Error(
           `Number "${digits}" is not registered on WhatsApp. Check the country code and number.`
@@ -491,7 +508,17 @@ class WhatsAppManager extends EventEmitter {
       }
     }
 
-    const sent = await this.client.sendMessage(target, content, sendOptions);
+    let sent;
+    try {
+      sent = await this.client.sendMessage(target, content, sendOptions);
+    } catch (err) {
+      console.error(`[wa] WhatsApp send failed to ${target}:`, err && err.stack ? err.stack : err);
+      const sendError = new Error(
+        `WhatsApp rejected the message to ${target}. Check the recipient number and restart the client if the problem continues.`
+      );
+      sendError.statusCode = 502;
+      throw sendError;
+    }
 
     // Some chats (especially @lid ids) do not return a message ID even though
     // delivery succeeded. Try the local store, but keep the send successful.
